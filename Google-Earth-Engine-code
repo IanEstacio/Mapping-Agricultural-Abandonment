@@ -1,0 +1,659 @@
+//----------Input data----------
+var L5_SR = ee.ImageCollection("LANDSAT/LT05/C02/T1_L2");
+var L8_SR = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2");
+var Catchment = ee.FeatureCollection("users/estacioian/Bangaan_cat");
+var DEM = ee.Image("USGS/SRTMGL1_003");
+var Streamline = ee.Image("users/estacioian/Stream");
+var Train1990 = ee.FeatureCollection("users/estacioian/Training/Training1990");
+var Train1995 = ee.FeatureCollection("users/estacioian/Training/Training1995");
+var Train2000 = ee.FeatureCollection("users/estacioian/Training/Training2000");
+var Train2005 = ee.FeatureCollection("users/estacioian/Training/Training2005");
+var Train2010 = ee.FeatureCollection("users/estacioian/Training/Training2010");
+var Train2015 = ee.FeatureCollection("users/estacioian/Training/Training2015");
+var Train2020 = ee.FeatureCollection("users/estacioian/Training/Training2020");
+var Val1990 = ee.FeatureCollection("users/estacioian/Validation/Validation1990");
+var Val1995 = ee.FeatureCollection("users/estacioian/Validation/Validation1995");
+var Val2000 = ee.FeatureCollection("users/estacioian/Validation/Validation2000");
+var Val2005 = ee.FeatureCollection("users/estacioian/Validation/Validation2005");
+var Val2010 = ee.FeatureCollection("users/estacioian/Validation/Validation2010");
+var Val2015 = ee.FeatureCollection("users/estacioian/Validation/Validation2015");
+var Val2020 = ee.FeatureCollection("users/estacioian/Validation/Validation2020");
+//----------Dates----------
+var SD88 = ee.Date('1987-12-01');var ED88 = ee.Date('1988-05-31');
+var SD89 = ee.Date('1988-12-01');var ED89 = ee.Date('1989-05-31');
+var SD90 = ee.Date('1989-12-01');var ED90 = ee.Date('1990-05-31');
+var SD91 = ee.Date('1990-12-01');var ED91 = ee.Date('1991-05-31');
+var SD92 = ee.Date('1991-12-01');var ED92 = ee.Date('1992-05-31');
+var SD93 = ee.Date('1992-12-01');var ED93 = ee.Date('1993-05-31');
+var SD94 = ee.Date('1993-12-01');var ED94 = ee.Date('1994-05-31');
+var SD95 = ee.Date('1994-12-01');var ED95 = ee.Date('1995-05-31');
+var SD96 = ee.Date('1995-12-01');var ED96 = ee.Date('1996-05-31');
+var SD97 = ee.Date('1996-12-01');var ED97 = ee.Date('1997-05-31');
+var SD98 = ee.Date('1997-12-01');var ED98 = ee.Date('1998-05-31');
+var SD99 = ee.Date('1998-12-01');var ED99 = ee.Date('1999-05-31');
+var SD00 = ee.Date('1999-12-01');var ED00 = ee.Date('2000-05-31');
+var SD01 = ee.Date('2000-12-01');var ED01 = ee.Date('2001-05-31');
+var SD02 = ee.Date('2001-12-01');var ED02 = ee.Date('2002-05-31');
+var SD03 = ee.Date('2002-12-01');var ED03 = ee.Date('2003-05-31');
+var SD04 = ee.Date('2003-12-01');var ED04 = ee.Date('2004-05-31');
+var SD05 = ee.Date('2004-12-01');var ED05 = ee.Date('2005-05-31');
+var SD06 = ee.Date('2005-12-01');var ED06 = ee.Date('2006-05-31');
+var SD07 = ee.Date('2006-12-01');var ED07 = ee.Date('2007-05-31');
+var SD08 = ee.Date('2007-12-01');var ED08 = ee.Date('2008-05-31');
+var SD09 = ee.Date('2008-12-01');var ED09 = ee.Date('2009-05-31');
+var SD10 = ee.Date('2009-12-01');var ED10 = ee.Date('2010-05-31');
+var SD11 = ee.Date('2010-12-01');var ED11 = ee.Date('2011-05-31');
+var SD12 = ee.Date('2011-12-01');var ED12 = ee.Date('2012-05-31');
+var SD13 = ee.Date('2012-12-01');var ED13 = ee.Date('2013-05-31');
+var SD14 = ee.Date('2013-12-01');var ED14 = ee.Date('2014-05-31');
+var SD15 = ee.Date('2014-12-01');var ED15 = ee.Date('2015-05-31');
+var SD16 = ee.Date('2015-12-01');var ED16 = ee.Date('2016-05-31');
+var SD17 = ee.Date('2016-12-01');var ED17 = ee.Date('2017-05-31');
+var SD18 = ee.Date('2017-12-01');var ED18 = ee.Date('2018-05-31');
+var SD19 = ee.Date('2018-12-01');var ED19 = ee.Date('2019-05-31');
+var SD20 = ee.Date('2019-12-01');var ED20 = ee.Date('2020-05-31');
+var SD21 = ee.Date('2020-12-01');var ED21 = ee.Date('2021-05-31');
+//----------------------------------------Start----------------------------------------
+//1. Filter collection to study area
+var L5_Ifugao = L5_SR.filterBounds(Catchment);
+var L8_Ifugao = L8_SR.filterBounds(Catchment);
+Map.centerObject(Catchment, 13);
+
+//2. Filter collections to plus/minus two years (Planting Season)
+function plusminus2years(imgcol,SDm2,EDm2,SDm1,EDm1,
+                              SD00,ED00,SDp1,EDp1,SDp2,EDp2){
+  var Ifugao_m2 = imgcol.filterDate(SDm2, EDm2);
+  var Ifugao_m1 = imgcol.filterDate(SDm1, EDm1);
+  var Ifugao_00 = imgcol.filterDate(SD00, ED00);
+  var Ifugao_p1 = imgcol.filterDate(SDp1, EDp1);
+  var Ifugao_p2 = imgcol.filterDate(SDp2, EDp2);
+  var Ifugao_TP = Ifugao_m2.merge(Ifugao_m1)
+                  .merge(Ifugao_00).merge(Ifugao_p1)
+                  .merge(Ifugao_p2);
+  return Ifugao_TP;
+}
+function plusminus1year2020(imgcol,SDm1,EDm1,
+                              SD00,ED00,SDp1,EDp1){
+  var Ifugao_m1 = imgcol.filterDate(SDm1, EDm1);
+  var Ifugao_00 = imgcol.filterDate(SD00, ED00);
+  var Ifugao_p1 = imgcol.filterDate(SDp1, EDp1);
+  var Ifugao_TP = Ifugao_m1.merge(Ifugao_00)
+                  .merge(Ifugao_p1);
+  return Ifugao_TP;
+}
+var L5_Ifugao1990_TP = plusminus2years(L5_Ifugao,SD88,ED88,SD89,ED89,
+                              SD90,ED90,SD91,ED91,SD92,ED92);
+var L5_Ifugao1995_TP = plusminus2years(L5_Ifugao,SD93,ED93,SD94,ED94,
+                              SD95,ED95,SD96,ED96,SD97,ED97);
+var L5_Ifugao2000_TP = plusminus2years(L5_Ifugao,SD98,ED98,SD99,ED99,
+                              SD00,ED00,SD01,ED01,SD02,ED02);
+var L5_Ifugao2005_TP = plusminus2years(L5_Ifugao,SD03,ED03,SD04,ED04,
+                              SD05,ED05,SD06,ED06,SD07,ED07);                             
+var L5_Ifugao2010_TP = plusminus2years(L5_Ifugao,SD08,ED08,SD09,ED09,
+                              SD10,ED10,SD11,ED11,SD12,ED12);  
+var L8_Ifugao2015_TP = plusminus2years(L8_Ifugao,SD13,ED13,SD14,ED14,
+                              SD15,ED15,SD16,ED16,SD17,ED17);
+var L8_Ifugao2020_TP = plusminus1year2020(L8_Ifugao,SD19,ED19,
+                              SD20,ED20,SD21,ED21);
+
+//3. Clip collections to catchment, mask cloud and cloud shadows, and rename bands
+function watershedclip(img){
+  return img.clip(Catchment);
+}
+function maskLSR(image) {
+  var qaMask = image.select('QA_PIXEL').bitwiseAnd(parseInt('11111', 2)).eq(0);
+  var saturationMask = image.select('QA_RADSAT').eq(0);
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
+  return image.addBands(opticalBands, null, true)
+      .addBands(thermalBands, null, true)
+      .updateMask(qaMask)
+      .updateMask(saturationMask);
+}
+function renamebands5(img){
+  var blue = img.select('SR_B1').rename('blue');
+  var green = img.select('SR_B2').rename('green');
+  var red = img.select('SR_B3').rename('red');
+  var nir = img.select('SR_B4').rename('nir');
+  var swir1 = img.select('SR_B5').rename('swir1');
+  var swir2 = img.select('SR_B7').rename('swir2');
+  return img.addBands(blue).addBands(green).addBands(red)
+            .addBands(nir).addBands(swir1).addBands(swir2);
+}
+function renamebands8(img){
+  var blue = img.select('SR_B2').rename('blue');
+  var green = img.select('SR_B3').rename('green');
+  var red = img.select('SR_B4').rename('red');
+  var nir = img.select('SR_B5').rename('nir');
+  var swir1 = img.select('SR_B6').rename('swir1');
+  var swir2 = img.select('SR_B7').rename('swir2');
+  return img.addBands(blue).addBands(green).addBands(red)
+            .addBands(nir).addBands(swir1).addBands(swir2);
+}
+var Ifugao1990_TP_masked = L5_Ifugao1990_TP.map(watershedclip).map(maskLSR).map(renamebands5);
+var Ifugao1995_TP_masked = L5_Ifugao1995_TP.map(watershedclip).map(maskLSR).map(renamebands5);
+var Ifugao2000_TP_masked = L5_Ifugao2000_TP.map(watershedclip).map(maskLSR).map(renamebands5);
+var Ifugao2005_TP_masked = L5_Ifugao2005_TP.map(watershedclip).map(maskLSR).map(renamebands5);
+var Ifugao2010_TP_masked = L5_Ifugao2010_TP.map(watershedclip).map(maskLSR).map(renamebands5);
+var Ifugao2015_TP_masked = L8_Ifugao2015_TP.map(watershedclip).map(maskLSR).map(renamebands8);
+var Ifugao2020_TP_masked = L8_Ifugao2020_TP.map(watershedclip).map(maskLSR).map(renamebands8);
+
+//4. Spatial patterns of good observation
+var I1990goodobservation = Ifugao1990_TP_masked.reduce(ee.Reducer.count());
+var I1995goodobservation = Ifugao1995_TP_masked.reduce(ee.Reducer.count());
+var I2000goodobservation = Ifugao2000_TP_masked.reduce(ee.Reducer.count());
+var I2005goodobservation = Ifugao2005_TP_masked.reduce(ee.Reducer.count());
+var I2010goodobservation = Ifugao2010_TP_masked.reduce(ee.Reducer.count());
+var I2015goodobservation = Ifugao2015_TP_masked.reduce(ee.Reducer.count());
+var I2020goodobservation = Ifugao2020_TP_masked.reduce(ee.Reducer.count());
+
+//5. Create composite for Principal Components Analysis
+var bandsI = ['blue', 'green', 'red', 'nir', 'swir1', 'swir2'];
+var PCAcomposite1990 = Ifugao1990_TP_masked.median().select(bandsI);
+var PCAcomposite1995 = Ifugao1995_TP_masked.median().select(bandsI);
+var PCAcomposite2000 = Ifugao2000_TP_masked.median().select(bandsI);
+var PCAcomposite2005 = Ifugao2005_TP_masked.median().select(bandsI);
+var PCAcomposite2010 = Ifugao2010_TP_masked.median().select(bandsI);
+var PCAcomposite2015 = Ifugao2015_TP_masked.median().select(bandsI);
+var PCAcomposite2020 = Ifugao2020_TP_masked.median().select(bandsI);
+
+//6. Train with Principal Component Analysis (in ArcGIS)
+function getNewBandNames(prefix, bNames){
+  var seq = ee.List.sequence(1, bNames.length());
+  return seq.map(function(b){
+    return ee.String(prefix).cat(ee.Number(b).int());
+  });
+}
+function DoCentered(composite, region){
+  var bandNames = composite.bandNames();
+  var meanDict = composite.reduceRegion({
+      reducer: ee.Reducer.mean(),
+      geometry: region,
+      scale: 30,
+      maxPixels: 1e9
+  });
+  var means = ee.Image.constant(meanDict.values(bandNames));
+  var centered = composite.subtract(means);  
+  return centered;
+}
+function getPrincipalComponents(centered, region){
+  var bandNames = centered.bandNames();
+  var arrays = centered.toArray();
+  var covar = arrays.reduceRegion({
+    reducer: ee.Reducer.centeredCovariance(),
+    geometry: region,
+    scale: 30,
+    maxPixels: 1e9
+  });
+  var covarArray = ee.Array(covar.get('array'));
+  var eigens = covarArray.eigen();
+  var eigenValues = eigens.slice(1, 0, 1);
+  var eigenVectors = eigens.slice(1, 1);
+  var arrayImage = arrays.toArray(1);
+  var principalComponents = ee.Image(eigenVectors).matrixMultiply(arrayImage);
+  var sdImage = ee.Image(eigenValues.sqrt())
+    .arrayProject([0]).arrayFlatten([getNewBandNames('sd', bandNames)]);
+  return principalComponents
+    .arrayProject([0])
+    .arrayFlatten([getNewBandNames('pc', bandNames)])
+    .divide(sdImage);
+}
+var pcImage1990 = getPrincipalComponents(DoCentered(PCAcomposite1990,Catchment),Catchment);
+var pcImage1995 = getPrincipalComponents(DoCentered(PCAcomposite1995,Catchment),Catchment);
+var pcImage2000 = getPrincipalComponents(DoCentered(PCAcomposite2000,Catchment),Catchment);
+var pcImage2005 = getPrincipalComponents(DoCentered(PCAcomposite2005,Catchment),Catchment);
+var pcImage2010 = getPrincipalComponents(DoCentered(PCAcomposite2010,Catchment),Catchment);
+var pcImage2015 = getPrincipalComponents(DoCentered(PCAcomposite2015,Catchment),Catchment);
+var pcImage2020 = getPrincipalComponents(DoCentered(PCAcomposite2020,Catchment),Catchment);
+
+//7. Include elevation as band
+var bandsL = ['blue', 'green', 'red', 'nir', 'swir1', 'swir2','elev'];
+var elev = ee.Image(watershedclip(DEM)).select('elevation').rename('elev');
+var composite1990 = Ifugao1990_TP_masked.median().addBands(elev).select(bandsL);
+var composite1995 = Ifugao1995_TP_masked.median().addBands(elev).select(bandsL);
+var composite2000 = Ifugao2000_TP_masked.median().addBands(elev).select(bandsL);
+var composite2005 = Ifugao2005_TP_masked.median().addBands(elev).select(bandsL);
+var composite2010 = Ifugao2010_TP_masked.median().addBands(elev).select(bandsL);
+var composite2015 = Ifugao2015_TP_masked.median().addBands(elev).select(bandsL);
+var composite2020 = Ifugao2020_TP_masked.median().addBands(elev).select(bandsL);
+
+//8. Classification through Random Forest (Part 1)
+function doTrainAndClassify_1(composite,bb,PCtrain){
+  var training_1 = composite.select(bb).sampleRegions({
+    collection: PCtrain,
+    properties: ['LC'],
+    scale: 30
+  });
+  var classifier_1 = ee.Classifier.smileRandomForest(100)
+    .train({
+      features: training_1,
+      classProperty: 'LC',
+      inputProperties: bb
+    });
+  var classified = composite.classify(classifier_1);
+  return classified;
+}
+var classified1990 = doTrainAndClassify_1(composite1990,bandsL,Train1990);
+var classified1995 = doTrainAndClassify_1(composite1995,bandsL,Train1995);
+var classified2000 = doTrainAndClassify_1(composite2000,bandsL,Train2000);
+var classified2005 = doTrainAndClassify_1(composite2005,bandsL,Train2005);
+var classified2010 = doTrainAndClassify_1(composite2010,bandsL,Train2010);
+var classified2015 = doTrainAndClassify_1(composite2015,bandsL,Train2015);
+var classified2020 = doTrainAndClassify_1(composite2020,bandsL,Train2020);
+
+//9. Create Frequency Map
+var lc_col = ee.ImageCollection(classified1990)
+             .merge(ee.ImageCollection(classified1995))
+             .merge(ee.ImageCollection(classified2000))
+             .merge(ee.ImageCollection(classified2005))
+             .merge(ee.ImageCollection(classified2010))
+             .merge(ee.ImageCollection(classified2015))
+             .merge(ee.ImageCollection(classified2010));
+function MaskFrequentLC(img){
+  var frequent = img.gte(5);
+  return frequent.updateMask(frequent);
+}
+var freq_ricefield = MaskFrequentLC(lc_col
+                  .map(function(img){return img.updateMask(img.eq(1))})
+                  .reduce(ee.Reducer.count()));
+var freq_builtup = MaskFrequentLC(lc_col
+                  .map(function(img){return img.updateMask(img.eq(2))})
+                  .reduce(ee.Reducer.count()));
+var freq_forest = MaskFrequentLC(lc_col
+                  .map(function(img){return img.updateMask(img.eq(3))})
+                  .reduce(ee.Reducer.count()));
+var freq_lowplants = MaskFrequentLC(lc_col
+                  .map(function(img){return img.updateMask(img.eq(4))})
+                  .reduce(ee.Reducer.count()));
+var ricefieldvector = freq_ricefield.reduceToVectors({geometry: Catchment,scale: 30});
+var builtupvector = freq_builtup.reduceToVectors({geometry: Catchment,scale: 30});
+var forestvector = freq_forest.reduceToVectors({geometry: Catchment,scale: 30});
+var lowplantsvector = freq_lowplants.reduceToVectors({geometry: Catchment,scale: 30});
+
+//10. Create new training samples
+function GetTrainingSamples(classified,vector){
+  var trainingfeat = classified.sample({
+    region: vector,
+    scale: 30,
+    numPixels: 5000,
+    geometries: true
+  });
+  return trainingfeat;
+}
+function GetTrainingSamples(classified,code,vector){
+  var trainingfeat = classified.updateMask(classified.eq(code)).sample({
+    region: vector,
+    scale: 30,
+    numPixels: 5000,
+    geometries: true
+  });
+  return trainingfeat;
+}
+
+function GetTrainFeat(classified,v1,v2,v3,v4){
+  var train_ricefield = GetTrainingSamples(classified,1,v1);
+  var train_builtup = GetTrainingSamples(classified,2,v2);
+  var train_forest = GetTrainingSamples(classified,3,v3);
+  var train_lowplants = GetTrainingSamples(classified,4,v4);
+  var train_features = train_ricefield.merge(train_builtup)
+                        .merge(train_forest).merge(train_lowplants);
+  return train_features;
+}
+var Trainfeat_2020 = GetTrainFeat(classified2020,ricefieldvector,
+                      builtupvector,forestvector,lowplantsvector);
+var Trainfeat_2015 = GetTrainFeat(classified2015,ricefieldvector,
+                      builtupvector,forestvector,lowplantsvector);
+var Trainfeat_2010 = GetTrainFeat(classified2010,ricefieldvector,
+                      builtupvector,forestvector,lowplantsvector);
+var Trainfeat_2005 = GetTrainFeat(classified2005,ricefieldvector,
+                      builtupvector,forestvector,lowplantsvector);
+var Trainfeat_2000 = GetTrainFeat(classified2000,ricefieldvector,
+                      builtupvector,forestvector,lowplantsvector);
+var Trainfeat_1995 = GetTrainFeat(classified1995,ricefieldvector,
+                      builtupvector,forestvector,lowplantsvector);
+var Trainfeat_1990 = GetTrainFeat(classified1995,ricefieldvector,
+                      builtupvector,forestvector,lowplantsvector);
+
+//11. Classification through Random Forest (Part 2)
+function doTrainAndClassify_2(composite,bb,train){
+  var training_2 = composite.select(bb).sampleRegions({
+    collection: train,
+    properties: ['classification'],
+    scale: 30
+  });
+  var classifier_2 = ee.Classifier.smileRandomForest(100)
+    .train({
+      features: training_2,
+      classProperty: 'classification',
+      inputProperties: bb
+    });
+  var classified = composite.classify(classifier_2);
+  return classified;
+}
+var classified_2_1990 = doTrainAndClassify_2(composite1990,bandsL,Trainfeat_1990);
+var classified_2_1995 = doTrainAndClassify_2(composite1995,bandsL,Trainfeat_1995);
+var classified_2_2000 = doTrainAndClassify_2(composite2000,bandsL,Trainfeat_2000);
+var classified_2_2005 = doTrainAndClassify_2(composite2005,bandsL,Trainfeat_2005);
+var classified_2_2010 = doTrainAndClassify_2(composite2010,bandsL,Trainfeat_2010);
+var classified_2_2015 = doTrainAndClassify_2(composite2015,bandsL,Trainfeat_2015);
+var classified_2_2020 = doTrainAndClassify_2(composite2020,bandsL,Trainfeat_2020);
+
+//12. Transition rules
+var lc_col2 = ee.ImageCollection(classified_2_1990)
+             .merge(ee.ImageCollection(classified_2_1995))
+             .merge(ee.ImageCollection(classified_2_2000))
+             .merge(ee.ImageCollection(classified_2_2005))
+             .merge(ee.ImageCollection(classified_2_2010))
+             .merge(ee.ImageCollection(classified_2_2015))
+             .merge(ee.ImageCollection(classified_2_2020));
+function transitionfirstyear(img1,img2,img3,c1,c2){
+  var img1rule = img1.updateMask(img1.eq(c1)); 
+  var img2rule = img2.updateMask(img2.eq(c2));
+  var img3rule = img3.updateMask(img3.eq(c2));
+  var finalrule = img1rule.and(img2rule).and(img3rule);
+  var img1filtered = img1.where(finalrule.eq(1),c2);
+  return img1filtered;
+}
+function transitionbetween(img1,img2,img3,c1,c2){
+  var img1rule = img1.updateMask(img1.eq(c1)); 
+  var img2rule = img2.updateMask(img2.eq(c2));
+  var img3rule = img3.updateMask(img3.eq(c1));
+  var finalrule = img1rule.and(img2rule).and(img3rule);
+  var img2filtered = img2.where(finalrule.eq(1),c1);
+  return img2filtered;
+}
+function transitionlastyear(img1,img2,img3,c1,c2){
+  var img1rule = img1.updateMask(img1.eq(c1)); 
+  var img2rule = img2.updateMask(img2.eq(c1));
+  var img3rule = img3.updateMask(img3.eq(c2));
+  var finalrule = img1rule.and(img2rule).and(img3rule);
+  var img3filtered = img3.where(finalrule.eq(1),c1);
+  return img3filtered;
+}
+function Filtertransitionfirstyear(lclist,accfilcol){
+  accfilcol = ee.ImageCollection(accfilcol);
+  lclist = ee.List(lclist);
+  var img1 = ee.Image(lclist.get(0));
+  var img2 = ee.Image(lclist.get(1));
+  var img3 = ee.Image(lclist.get(2));
+  var rule9 = transitionfirstyear(img1,img2,img3,2,1); //BRR
+  var rule10 = transitionfirstyear(rule9,img2,img3,2,3); //BFF
+  var resultimage = ee.Image(rule10);
+  var accfilcol_update = accfilcol.merge(ee.ImageCollection(resultimage));
+  return accfilcol_update;
+}
+function Filtertransitionbetween(currentno,startdic){
+  startdic = ee.Dictionary(startdic);
+  var accfilcol = ee.ImageCollection(startdic.get('accfilcol'));
+  var lclist = ee.List(startdic.get('lclist'));
+  currentno = ee.Number(currentno);
+  var img1 = ee.Image(lclist.get(currentno.subtract(1)));
+  var img2 = ee.Image(lclist.get(currentno));
+  var img3 = ee.Image(lclist.get(currentno.add(1)));
+  var rule1 = transitionbetween(img1,img2,img3,1,2); //RBR
+  var rule2 = transitionbetween(img1,rule1,img3,1,3); //RFR
+  var rule3 = transitionbetween(img1,rule2,img3,2,1); //BRB
+  var rule4 = transitionbetween(img1,rule3,img3,2,3); //BFB
+  var rule5 = transitionbetween(img1,rule4,img3,2,4); //BLB
+  var rule6 = transitionbetween(img1,rule5,img3,3,1); //FRF
+  var rule7 = transitionbetween(img1,rule6,img3,3,2); //FBF
+  var rule8 = transitionbetween(img1,rule7,img3,4,2); //LBL
+  var resultimage = ee.Image(rule8);
+  var coldictionary = ee.Dictionary({
+    accfilcol: accfilcol.merge(ee.ImageCollection(resultimage)),
+    lclist: lclist
+  });
+  return coldictionary;
+}
+function Filtertransitionlastyear(lclist,accfilcol){
+  accfilcol = ee.ImageCollection(accfilcol);
+  lclist = ee.List(lclist);
+  var img1 = ee.Image(lclist.get(-3));
+  var img2 = ee.Image(lclist.get(-2));
+  var img3 = ee.Image(lclist.get(-1));
+  var rule11 = transitionlastyear(img1,img2,img3,2,1); //BBR
+  var rule12 = transitionlastyear(img1,img2,rule11,2,3); //BBF
+  var resultimage = ee.Image(rule12);
+  var accfilcol_update = accfilcol.merge(ee.ImageCollection(resultimage));
+  return accfilcol_update;
+}
+function IterateTemporalFilter(curno, lccol){
+  lccol = ee.ImageCollection(lccol);
+  var landcoverlist = ee.List(lccol.toList(7));
+  var accfiltercol = ee.ImageCollection([]);
+  var filfirst_accfilcol = Filtertransitionfirstyear(landcoverlist,accfiltercol);
+  var bet_list = ee.List([1,2,3,4,5]);
+  var bet_dic = ee.Dictionary({
+      accfilcol: filfirst_accfilcol,
+      lclist: landcoverlist
+    });
+  var betweenresdic = ee.Dictionary(bet_list.iterate(Filtertransitionbetween, bet_dic));
+  var filbet_accfilcol = ee.ImageCollection(betweenresdic.get('accfilcol'));
+  var fillast_accfilcol = Filtertransitionlastyear(landcoverlist,filbet_accfilcol);
+  return fillast_accfilcol;
+}
+var iter_list = ee.List([1,2,3]);
+var fil_lc_col = ee.ImageCollection(iter_list.iterate(IterateTemporalFilter, lc_col2));
+var prefinalclassified1990 = ee.Image(fil_lc_col.toList(7).get(0));
+var prefinalclassified1995 = ee.Image(fil_lc_col.toList(7).get(1));
+var prefinalclassified2000 = ee.Image(fil_lc_col.toList(7).get(2));
+var prefinalclassified2005 = ee.Image(fil_lc_col.toList(7).get(3));
+var prefinalclassified2010 = ee.Image(fil_lc_col.toList(7).get(4));
+var prefinalclassified2015 = ee.Image(fil_lc_col.toList(7).get(5));
+var prefinalclassified2020 = ee.Image(fil_lc_col.toList(7).get(6));
+
+//13. Masking misclassified paddy fields
+function filterclip(img){
+  var watermask =  img.where(img.eq(1),1)
+                      .where(img.eq(2),1)
+                      .where(img.eq(3),1)
+                      .where(img.eq(4),1)
+                      .where(img.eq(5),0);
+  var maskedcliped = img.updateMask(watermask).clip(Catchment).rename('classification');
+  return maskedcliped;
+}
+function maskpaddyinstream(prefinalclassified,stream){
+  var paddyinwater = prefinalclassified.eq(1).and(stream);
+  var prefinalwater = prefinalclassified.where(paddyinwater.eq(1),5);
+  var neighbor = prefinalwater.neighborhoodToBands(ee.Kernel.square(1));
+  var neighborscollection = 
+                      ee.ImageCollection(filterclip(neighbor.select("classification_-1_-1")))
+               .merge(ee.ImageCollection(filterclip(neighbor.select("classification_0_-1"))))
+               .merge(ee.ImageCollection(filterclip(neighbor.select("classification_1_-1"))))
+               .merge(ee.ImageCollection(filterclip(neighbor.select("classification_-1_0"))))
+               .merge(ee.ImageCollection(filterclip(neighbor.select("classification_1_0"))))
+               .merge(ee.ImageCollection(filterclip(neighbor.select("classification_-1_1"))))
+               .merge(ee.ImageCollection(filterclip(neighbor.select("classification_0_1"))))
+               .merge(ee.ImageCollection(filterclip(neighbor.select("classification_1_1"))));
+  var majorityneighbor = neighborscollection.reduce(ee.Reducer.mode());
+  var finalclassified = prefinalclassified.where(paddyinwater.eq(1),majorityneighbor);
+  return finalclassified;
+}
+var finalclassified1990 = maskpaddyinstream(prefinalclassified1990,Streamline);
+var finalclassified1995 = maskpaddyinstream(prefinalclassified1995,Streamline);
+var finalclassified2000 = maskpaddyinstream(prefinalclassified2000,Streamline);
+var finalclassified2005 = maskpaddyinstream(prefinalclassified2005,Streamline);
+var finalclassified2010 = maskpaddyinstream(prefinalclassified2010,Streamline);
+var finalclassified2015 = maskpaddyinstream(prefinalclassified2015,Streamline);
+var finalclassified2020 = maskpaddyinstream(prefinalclassified2020,Streamline);
+var LCPalette = {
+  min: 1, 
+  max: 4,
+  palette: [
+    'cdb33b', // rice field
+    'c4c4c4', // built-up
+    '225129', // forest
+    '387242' // low plants
+  ]
+};
+Map.addLayer(finalclassified1990, LCPalette, 'Land Cover 1990');
+Map.addLayer(finalclassified1995, LCPalette, 'Land Cover 1995');
+Map.addLayer(finalclassified2000, LCPalette, 'Land Cover 2000');
+Map.addLayer(finalclassified2005, LCPalette, 'Land Cover 2005');
+Map.addLayer(finalclassified2010, LCPalette, 'Land Cover 2010');
+Map.addLayer(finalclassified2015, LCPalette, 'Land Cover 2015');
+Map.addLayer(finalclassified2020, LCPalette, 'Land Cover 2020');
+
+//14. Accuracy Assessment
+function validateImage(finalclassifiedyr, Valyr, yr){
+  var validationyr = finalclassifiedyr.sampleRegions({
+    collection: Valyr,
+    properties: ['actual'],
+    scale: 30,
+  });
+  print("Validation feature:", yr, validationyr);
+  var testAccuracyyr = validationyr.errorMatrix('actual', 'classification');
+  print('Validation error matrix: ', yr, testAccuracyyr);
+  var AccuracyDic = ee.Dictionary({
+    Consumers: testAccuracyyr.consumersAccuracy(),
+    Producers: testAccuracyyr.producersAccuracy(),
+    Overall: testAccuracyyr.accuracy(),
+    Kappa: testAccuracyyr.kappa()
+  });
+  print("Validation Accuracies:", yr, AccuracyDic);
+  return testAccuracyyr;
+}
+var testAccuracy1990 = validateImage(finalclassified1990, Val1990, 1990);
+var testAccuracy1995 = validateImage(finalclassified1995, Val1995, 1995);
+var testAccuracy2000 = validateImage(finalclassified2000, Val2000, 2000);
+var testAccuracy2005 = validateImage(finalclassified2005, Val2005, 2005);
+var testAccuracy2010 = validateImage(finalclassified2010, Val2010, 2010);
+var testAccuracy2015 = validateImage(finalclassified2015, Val2015, 2015);
+var testAccuracy2020 = validateImage(finalclassified2020, Val2020, 2020);
+
+//15. Agriculture Change analysis
+function AgriAbandon(classified, code){
+  var rice = classified.where(classified.eq(1),code)
+                        .where(classified.eq(2),0)
+                        .where(classified.eq(3),0)
+                        .where(classified.eq(4),0);
+  return rice;                      
+}
+var riceA1990 = AgriAbandon(finalclassified1990,1);
+var riceA1995 = AgriAbandon(finalclassified1995,2);
+var riceA2000 = AgriAbandon(finalclassified2000,3);
+var riceA2005 = AgriAbandon(finalclassified2005,4);
+var riceA2010 = AgriAbandon(finalclassified2010,5);
+var riceA2015 = AgriAbandon(finalclassified2015,6);
+var riceA2020 = AgriAbandon(finalclassified2020,7);
+var rice_last = ee.ImageCollection(riceA1990)
+             .merge(ee.ImageCollection(riceA1995))
+             .merge(ee.ImageCollection(riceA2000))
+             .merge(ee.ImageCollection(riceA2005))
+             .merge(ee.ImageCollection(riceA2010))
+             .merge(ee.ImageCollection(riceA2015))
+             .merge(ee.ImageCollection(riceA2020)).max();
+function AgriExpansion(classified, code){
+  var rice = classified.where(classified.eq(1),code)
+                        .where(classified.eq(2),8)
+                        .where(classified.eq(3),8)
+                        .where(classified.eq(4),8);
+  return rice;                      
+}
+var riceE1990 = AgriExpansion(finalclassified1990,1);
+var riceE1995 = AgriExpansion(finalclassified1995,2);
+var riceE2000 = AgriExpansion(finalclassified2000,3);
+var riceE2005 = AgriExpansion(finalclassified2005,4);
+var riceE2010 = AgriExpansion(finalclassified2010,5);
+var riceE2015 = AgriExpansion(finalclassified2015,6);
+var riceE2020 = AgriExpansion(finalclassified2020,7);
+var rice_first = ee.ImageCollection(riceE1990)
+             .merge(ee.ImageCollection(riceE1995))
+             .merge(ee.ImageCollection(riceE2000))
+             .merge(ee.ImageCollection(riceE2005))
+             .merge(ee.ImageCollection(riceE2010))
+             .merge(ee.ImageCollection(riceE2015))
+             .merge(ee.ImageCollection(riceE2020)).min()
+             .remap([1,2,3,4,5,6,7,8],[1,2,3,4,5,6,7,0]);
+
+//16. Expansion and reduction of land cover types
+function Reclass(classified,classcode,code){
+  var reclass = classified.where(classified.eq(1),0)
+                        .where(classified.eq(2),0)
+                        .where(classified.eq(3),0)
+                        .where(classified.eq(4),0)
+                        .where(classified.eq(classcode),code);
+  return reclass;                      
+}
+function RedandExp(finalc1990,finalc2020,classcode){
+  var classfirstyr = Reclass(finalc1990,classcode,1);
+  var classlastyr = Reclass(finalc2020,classcode,2);
+  var classdiff = classlastyr.subtract(classfirstyr);
+  var classchange = classfirstyr //if continuous, = 1
+                  .where(classdiff.eq(-1),2) //if abandoned, = -1
+                  .where(classdiff.eq(2),3); //if expanded, = 2
+  return classchange;
+}
+var ricechange = RedandExp(finalclassified1990,finalclassified2020,1);
+var builtupchange = RedandExp(finalclassified1990,finalclassified2020,2);
+var forestchange = RedandExp(finalclassified1990,finalclassified2020,3);
+var lowplantschange = RedandExp(finalclassified1990,finalclassified2020,4);
+
+//17. Transition values
+function TransitionClass(classifiedfrom,classifiedto,classcodefrom,classcodeto){
+  var transtofrom = classifiedfrom.eq(classcodefrom).and(classifiedto.eq(classcodeto));
+  return transtofrom;                      
+}
+function TransitionsEachPeriod(classifiedfrom,classifiedto){
+  var ricTOric = TransitionClass(classifiedfrom,classifiedto,1,1);
+  var ricTObui = TransitionClass(classifiedfrom,classifiedto,1,2);
+  var ricTOfor = TransitionClass(classifiedfrom,classifiedto,1,3);
+  var ricTOlow = TransitionClass(classifiedfrom,classifiedto,1,4);
+  var buiTOric = TransitionClass(classifiedfrom,classifiedto,2,1);
+  var buiTObui = TransitionClass(classifiedfrom,classifiedto,2,2);
+  var buiTOfor = TransitionClass(classifiedfrom,classifiedto,2,3);
+  var buiTOlow = TransitionClass(classifiedfrom,classifiedto,2,4);
+  var forTOric = TransitionClass(classifiedfrom,classifiedto,3,1);
+  var forTObui = TransitionClass(classifiedfrom,classifiedto,3,2);
+  var forTOfor = TransitionClass(classifiedfrom,classifiedto,3,3);
+  var forTOlow = TransitionClass(classifiedfrom,classifiedto,3,4);
+  var lowTOric = TransitionClass(classifiedfrom,classifiedto,4,1);
+  var lowTObui = TransitionClass(classifiedfrom,classifiedto,4,2);
+  var lowTOfor = TransitionClass(classifiedfrom,classifiedto,4,3);
+  var lowTOlow = TransitionClass(classifiedfrom,classifiedto,4,4);
+  var transitionmap = classifiedfrom
+                      .where(ricTOric.eq(1),1).where(ricTObui.eq(1),2)
+                      .where(ricTOfor.eq(1),3).where(ricTOlow.eq(1),4)
+                      .where(buiTOric.eq(1),5).where(buiTObui.eq(1),6)
+                      .where(buiTOfor.eq(1),7).where(buiTOlow.eq(1),8)
+                      .where(forTOric.eq(1),9).where(forTObui.eq(1),10)
+                      .where(forTOfor.eq(1),11).where(forTOlow.eq(1),12)
+                      .where(lowTOric.eq(1),13).where(lowTObui.eq(1),14)
+                      .where(lowTOfor.eq(1),15).where(lowTOlow.eq(1),16);
+  return transitionmap;
+}
+var transition1990to1995 = TransitionsEachPeriod(finalclassified1990,finalclassified1995);
+var transition1995to2000 = TransitionsEachPeriod(finalclassified1995,finalclassified2000);
+var transition2000to2005 = TransitionsEachPeriod(finalclassified2000,finalclassified2005);
+var transition2005to2010 = TransitionsEachPeriod(finalclassified2005,finalclassified2010);
+var transition2010to2015 = TransitionsEachPeriod(finalclassified2010,finalclassified2015);
+var transition2015to2020 = TransitionsEachPeriod(finalclassified2015,finalclassified2020);
+
+//18. Agricultural Abandonment and Expansion
+function Paddydynamics(transition,ricelast,lastcode,ricefirst,firstcode){
+  var abandonment = transition.where(transition.eq(1),0).where(transition.eq(2),1)
+                              .where(transition.eq(3),1).where(transition.eq(4),1)
+                              .where(transition.eq(5),0).where(transition.eq(6),0)
+                              .where(transition.eq(7),0).where(transition.eq(8),0)
+                              .where(transition.eq(9),0).where(transition.eq(10),0)
+                              .where(transition.eq(11),0).where(transition.eq(12),0)
+                              .where(transition.eq(13),0).where(transition.eq(14),0)
+                              .where(transition.eq(15),0).where(transition.eq(16),0);
+  var expansion = transition.where(transition.eq(1),0).where(transition.eq(2),0)
+                              .where(transition.eq(3),0).where(transition.eq(4),0)
+                              .where(transition.eq(5),1).where(transition.eq(6),0)
+                              .where(transition.eq(7),0).where(transition.eq(8),0)
+                              .where(transition.eq(9),1).where(transition.eq(10),0)
+                              .where(transition.eq(11),0).where(transition.eq(12),0)
+                              .where(transition.eq(13),1).where(transition.eq(14),0)
+                              .where(transition.eq(15),0).where(transition.eq(16),0);
+  var paddydynamics = abandonment.where(rice_last.eq(lastcode),2)
+        .where(expansion.eq(1),3).where(rice_first.eq(firstcode),4);
+  return paddydynamics;                      
+}
+var PaddyDynamics19901995 = Paddydynamics(transition1990to1995,rice_last,1,rice_first,2);
+var PaddyDynamics19952000 = Paddydynamics(transition1995to2000,rice_last,2,rice_first,3);
+var PaddyDynamics20002005 = Paddydynamics(transition2000to2005,rice_last,3,rice_first,4);
+var PaddyDynamics20052010 = Paddydynamics(transition2005to2010,rice_last,4,rice_first,5);
+var PaddyDynamics20102015 = Paddydynamics(transition2010to2015,rice_last,5,rice_first,6);
+var PaddyDynamics20152020 = Paddydynamics(transition2015to2020,rice_last,6,rice_first,7);
